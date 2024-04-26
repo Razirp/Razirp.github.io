@@ -55,7 +55,7 @@ top: 1
 
 ## II. 设计概览
 
-```mermaid
+<div class="mermaid">
 classDiagram
     class thread_pool {
         +thread_pool(std::size_t initial_thread_count, std::size_t max_task_count)
@@ -85,7 +85,7 @@ classDiagram
         +bool is_terminating() const
     }
     thread_pool --> worker_thread : manages
-```
+</div>
 
 ### 库架构
 
@@ -172,7 +172,7 @@ classDiagram
 
 #### 线程池状态机
 
-```mermaid
+<div class="mermaid">
 stateDiagram-v2
     [*] --> RUNNING : 初始化
     RUNNING --> PAUSED : 暂停-pause()
@@ -182,7 +182,7 @@ stateDiagram-v2
     PAUSED --> TERMINATING : shutdown_now()/terminate()
     SHUTDOWN --> TERMINATING : 所有任务完成
     TERMINATING --> TERMINATED : 所有线程终止
-```
+</div>
 
 **状态枚举定义**：定义了如`RUNNING`、`PAUSED`、`SHUTDOWN`等状态枚举值，用于表示线程池的不同运行状态。
 
@@ -204,7 +204,7 @@ enum class status_t : std::int8_t {
 
 ### 任务调度与执行
 
-```mermaid
+<div class="mermaid">
 graph TD
     subgraph 线程池
     TP(thread_pool)
@@ -221,7 +221,7 @@ graph TD
     WT -->|取任务| WT
     WT -->|执行任务| WT
     WT -->|将任务队列取至空时提示线程池| TP
-```
+</div>
 
 #### 任务提交
 
@@ -255,7 +255,7 @@ graph TD
 
 ### 动态线程调整
 
-```mermaid
+<div class="mermaid">
 sequenceDiagram
     participant 用户
     participant 线程池
@@ -268,7 +268,7 @@ sequenceDiagram
     用户->>线程池: remove_thread(count)
     线程池->>工作线程: 终止并析构 count 个工作线程对象
     工作线程-->>线程池: 工作线程终止并析构完毕
-```
+</div>
 
 **`add_thread` 与 `remove_thread` 方法**：
 
