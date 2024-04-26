@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- <meta name="google-translate-customization" content="108d9124921d80c3-80e20d618ff053c8-g4f02ec6f3dba68b7-c"> --><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>一个现代 C++ 实现的高效线程池 | Razirp’s Blog</title>
+<meta name="generator" content="Jekyll v4.3.3">
+<meta property="og:title" content="一个现代 C++ 实现的高效线程池">
+<meta name="author" content="Razirp">
+<meta property="og:locale" content="en_US">
+<meta name="description" content="A thread pool implemented in modern C++. 代码已开源在 GitHub。">
+<meta property="og:description" content="A thread pool implemented in modern C++. 代码已开源在 GitHub。">
+<link rel="canonical" href="https//razirp.github.io/jekyll-theme-yat/c++/2024/04/24/ThreadPoolBlog.html">
+<meta property="og:url" content="https//razirp.github.io/jekyll-theme-yat/c++/2024/04/24/ThreadPoolBlog.html">
+<meta property="og:site_name" content="Razirp’s Blog">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2024-04-24T00:00:00+00:00">
+<meta name="twitter:card" content="summary">
+<meta property="twitter:title" content="一个现代 C++ 实现的高效线程池">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Razirp"},"dateModified":"2024-04-24T00:00:00+00:00","datePublished":"2024-04-24T00:00:00+00:00","description":"A thread pool implemented in modern C++. 代码已开源在 GitHub。","headline":"一个现代 C++ 实现的高效线程池","mainEntityOfPage":{"@type":"WebPage","@id":"https//razirp.github.io/jekyll-theme-yat/c++/2024/04/24/ThreadPoolBlog.html"},"url":"https//razirp.github.io/jekyll-theme-yat/c++/2024/04/24/ThreadPoolBlog.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" href="">
+  <link rel="canonical" href="https//razirp.github.io">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-noto-sans@0.0.72/index.min.css">
+  <link rel="stylesheet" href="/jekyll-theme-yat/assets/css/main.css">
+  <script src="/jekyll-theme-yat/assets/js/main.js"></script><link type="application/atom+xml" rel="alternate" href="https//razirp.github.io/jekyll-theme-yat/feed.xml" title="Razirp's Blog">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script charset="UTF-8" src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/languages/go.min.js" async></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+// Init highlight js
+document.addEventListener('DOMContentLoaded', function(event) {
+  var els = document.querySelectorAll('pre code')
+
+  function addLangData(block) {
+    var outer = block.parentElement.parentElement.parentElement;
+    var lang = block.getAttribute('data-lang');
+    for (var i = 0; i < outer.classList.length; i++) {
+      var cls = outer.classList[i];
+      if (cls.startsWith('language-')) {
+        lang = cls;
+        break;
+      }
+    }
+    if (!lang) {
+      cls = block.getAttribute('class');
+      lang = cls ? cls.replace('hljs ', '') : '';
+    }
+    if (lang.startsWith('language-')) {
+      lang = lang.substr(9);
+    }
+    block.setAttribute('class', 'hljs ' + lang);
+    block.parentNode.setAttribute('data-lang', lang);
+  }
+
+  function addBadge(block) {
+    var enabled = ('true' || 'true').toLowerCase();
+    if (enabled == 'true') {
+      var pre = block.parentElement;
+      pre.classList.add('badge');
+    }
+  }
+
+  function handle(block) {
+    addLangData(block);
+    addBadge(block)
+    hljs.highlightBlock(block);
+  }
+
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    handle(el);
+  }
+});
+</script>
+
+<style>
+  /* code language badge */
+  pre.badge::before {
+    content: attr(data-lang);
+    color: #fff;
+    background-color: #ff4e00;
+    padding: 0 .5em;
+    border-radius: 0 2px;
+    text-transform: uppercase;
+    text-align: center;
+    min-width: 32px;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+  }
+
+  /* fix wrong badge display for firefox browser */
+  code > table pre::before {
+    display: none;
+  }
+</style>
+<script src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe-lightbox.umd.min.js" async></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/umd/photoswipe.umd.min.js" async></script>
+<link href="//cdnjs.cloudflare.com/ajax/libs/photoswipe/5.3.7/photoswipe.min.css" rel="stylesheet">
+<style>
+  .pswp .pswp__container .pswp__img {
+    background-color: white;
+  }
+</style>
+
+<script>
+  function initPhotoSwipe() {
+    let customOptions = {};
+
+    try {
+      const data = ``.replaceAll("=>", ":");
+      customOptions = JSON.parse(data);
+    } catch (e) {
+      console.info("Invalid custom photo previewer options! " + e.message);
+    }
+
+    // Define object and gallery options
+    const options = Object.assign(
+      {
+        gallery: "section.main",
+        children: "a.photo-swipe",
+        photo_scale: 2,
+        // dynamic import is not supported in UMD version
+        pswpModule: PhotoSwipe,
+      },
+      customOptions
+    );
+
+    const galleryEl = document.querySelector(options.gallery);
+    if (!galleryEl) {
+      return;
+    }
+
+    const imgEls = [];
+    const els = galleryEl.querySelectorAll("img:not(.emoji)");
+    els.forEach((el) => {
+      if (el.src.trim() == "") {
+        return;
+      }
+      if (!imgEls.includes(el)) {
+        imgEls.push(el);
+      }
+    });
+
+    if (imgEls.length === 0) {
+      return;
+    }
+
+    imgEls.forEach((imgEl) => {
+      imgEl.outerHTML = `
+      <a class="photo-swipe"
+        href="${imgEl.src}"
+        data-pswp-width="${
+          Math.max(imgEl.naturalWidth, imgEl.width) * options.photo_scale
+        }"
+        data-pswp-height="${
+          Math.max(imgEl.naturalHeight, imgEl.height) * options.photo_scale
+        }"
+        data-pswp-caption="${imgEl.getAttribute("caption") || imgEl.alt}"
+        target="_blank">
+        ${imgEl.outerHTML}
+      </a>`;
+    });
+
+    // Initialize PhotoSwipe 5
+    var lightbox = new PhotoSwipeLightbox(options);
+
+    lightbox.init();
+  }
+
+  window.addEventListener("load", initPhotoSwipe);
+</script>
+</head>
+<body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<header class="site-header site-header-transparent" role="banner">
+
+  <div class="wrapper">
+    <div class="site-header-inner">
+<span class="site-brand"><a class="site-brand-inner" rel="author" href="/jekyll-theme-yat/">
+  <img class="site-favicon" title="Razirp's Blog" src="" onerror="this.style.display='none'">
+  Razirp's Blog
+</a>
+</span><nav class="site-nav">
+          <input type="checkbox" id="nav-trigger" class="nav-trigger">
+          <label for="nav-trigger">
+            <span class="menu-icon">
+              <svg viewbox="0 0 18 15" width="18px" height="15px">
+                <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"></path>
+              </svg>
+            </span>
+          </label>
+
+          <div class="trigger">
+<a class="page-link" href="/jekyll-theme-yat/">首页</a><a class="page-link" href="/jekyll-theme-yat/archives.html">博客</a><a class="page-link" href="/jekyll-theme-yat/categories.html">分类</a><a class="page-link" href="/jekyll-theme-yat/tags.html">标签</a><a class="page-link" href="/jekyll-theme-yat/about.html">关于</a><!--
+
+
+
+
+
+
+
+
+
+<div class="page-link" style="display: inline;">
+
+
+
+<div id="google_translate_element" style="display: none;">
+</div>
+
+<div class="ct-language">
+  <ul class="list-unstyled ct-language-dropdown">
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="en">
+          
+          <img src="https://cdn.countryflags.com/thumbs/united-states-of-america/flag-400.png" title="English">
+          
+        </a>
+      </li>
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="fr">
+          
+          <img src="https://cdn.countryflags.com/thumbs/france/flag-400.png" title="French">
+          
+        </a>
+      </li>
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="zh-CN">
+          
+          <img src="https://cdn.countryflags.com/thumbs/china/flag-400.png" title="Chinese(Simple)">
+          
+        </a>
+      </li>
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="ja">
+          
+          <img src="https://cdn.countryflags.com/thumbs/japan/flag-400.png" title="Japanese">
+          
+        </a>
+      </li>
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="ko">
+          
+          <img src="https://cdn.countryflags.com/thumbs/south-korea/flag-400.png" title="Korean">
+          
+        </a>
+      </li>
+    
+      <li>
+        <a href="#" class="lang-select" data-lang="ru">
+          
+          <img src="https://cdn.countryflags.com/thumbs/russia/flag-400.png" title="Russian">
+          
+        </a>
+      </li>
+    
+  </ul>
+</div>
+
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'en',
+    autoDisplay: false,
+    layout: google.translate.TranslateElement.InlineLayout.VERTICAL
+  }, 'google_translate_element');
+
+  // Links to cross-origin destinations are unsafe
+  var gll = document.getElementsByClassName('goog-logo-link')[0];
+  if (gll) {
+    gll.setAttribute('rel', 'noopener');
+  }
+
+  function restoreLang() {
+    var iframe = document.getElementsByClassName('goog-te-banner-frame')[0];
+    if (!iframe) return;
+
+    var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+    var restore_el = innerDoc.getElementsByTagName("button");
+
+    for (var i = 0; i < restore_el.length; i++) {
+      if (restore_el[i].id.indexOf("restore") >= 0) {
+        restore_el[i].click();
+        var close_el = innerDoc.getElementsByClassName("goog-close-link");
+        close_el[0].click();
+        return;
+      }
+    }
+  }
+
+  function triggerHtmlEvent(element, eventName) {
+    var event;
+    if (document.createEvent) {
+      event = document.createEvent('HTMLEvents');
+      event.initEvent(eventName, true, true);
+      element.dispatchEvent(event);
+    } else {
+      event = document.createEventObject();
+      event.eventType = eventName;
+      element.fireEvent('on' + event.eventType, event);
+    }
+  }
+
+  var googleCombo = document.querySelector("select.goog-te-combo");
+  var langSelect = document.querySelector('.ct-language');
+  langSelect.addEventListener('click', function(event) {
+    if (!event.target) {
+      return;
+    }
+
+    var selected = document.querySelector('.ct-language .ct-language-selected');
+    if (selected) {
+      selected.classList.remove('ct-language-selected');
+    }
+
+    var target = event.target;
+    while (target && target !== langSelect ) {
+      if (target.matches('.lang-select')) {
+        break;
+      }
+      target = target.parentElement;
+    }
+
+    if (target && target.matches('.lang-select')) {
+      var lang = target.getAttribute('data-lang');
+      if (googleCombo.value == lang) {
+        restoreLang();
+      } else {
+        target.parentElement.classList.add('ct-language-selected');
+        googleCombo.value = lang;
+        triggerHtmlEvent(googleCombo, 'change');
+      }
+    }
+
+    event.preventDefault();
+  });
+}
+</script>
+
+<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+</div>-->
+          </div>
+        </nav>
+</div>
+  </div>
+</header>
+
+<script>
+  function initHeader() {
+    var lastScrollY = getScrollPos().y;
+    var documentElement = document.documentElement;
+
+    function storeScrollData() {
+      var y = getScrollPos().y;documentElement.setAttribute("data-header-transparent", "");var scrollStatus = "";
+
+      if (y <= 0) {
+        scrollStatus = "top";
+      } else if ((window.innerHeight + y) >= document.body.offsetHeight) {
+        scrollStatus = "bottom";
+      } else {
+        var isScrollDown = (y - lastScrollY > 0) ? true : false;
+        scrollStatus = isScrollDown ? "down" : "up";
+      }
+
+      lastScrollY = y;
+      documentElement.setAttribute("data-scroll-status", scrollStatus);
+    }
+
+    window.addEventListener('scroll', function(e) {
+      storeScrollData();
+    });
+
+    storeScrollData();
+  }
+  document.addEventListener('DOMContentLoaded', initHeader);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style>
+    html .page-banner {
+      background: #000;
+    }
+  </style>
+<style>html .page-banner {
+      height:  36.8vh;
+      min-height: 38vh;
+    }
+    html[data-scroll-status="top"] .page-banner {
+      height: 100vh;
+    }
+  </style>
+<style>
+    html .page-banner .page-banner-img > *:first-child {
+      opacity: 0.618;
+    }
+
+    html[data-theme="dark"] .page-banner .page-banner-img > *:first-child {
+      opacity: 0.443724;
+    }
+  </style>
+<style>
+    html .page-banner .page-banner-inner > *:first-child > *:nth-child(1) {
+      font-size: 4.25em; font-weight: bold; text-decoration: underline
+    }
+  </style>
+<style>
+    html .page-banner .page-banner-inner > *:first-child > *:nth-child(2) {
+      color: gold
+    }
+  </style>
+<section class="page-banner">
+    <div class="page-banner-img">
+<div style="background-image: url(/jekyll-theme-yat/assets/images/backgrounds/thread_pool.jpeg)"></div>
+        <img class="img-placeholder" src="/jekyll-theme-yat/assets/images/backgrounds/thread_pool.jpeg">
+</div>
+    <div class="wrapper">
+      <div class="page-banner-inner">
+<header class="post-header">
+  <h1 class="post-title p-name" itemprop="name headline">一个现代 C++ 实现的高效线程池</h1>
+  <h2 class="post-subtitle">工作原理与实现细节</h2>
+
+  <div class="post-meta">
+    <time class="dt-published" datetime="2024-04-24T00:00:00+00:00" itemprop="datePublished"><i class="fa fa-calendar"></i> 2024 Apr 24
+    </time><span class="post-author left-vsplit"><i class="fa fa-pencil"></i> Razirp</span>
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <span class="post-reading-time left-vsplit"><i class="fa fa-clock-o"></i> About 23 mins</span>
+  </div>
+<div class="post-tags">
+<a class="post-tag" href="/jekyll-theme-yat/tags.html#%E7%BA%BF%E7%A8%8B%E6%B1%A0">#线程池</a><a class="post-tag" href="/jekyll-theme-yat/tags.html#%E9%A1%B9%E7%9B%AE">#项目</a><a class="post-tag" href="/jekyll-theme-yat/tags.html#C++">#C++</a>
+</div></header>
+</div>
+    </div>
+  </section><script>
+  function hashLocate(hashValue) {
+    hashValue = hashValue.replace(/^.*#h-/, '');
+    hashValue = decodeURIComponent(hashValue);
+    var element = document.getElementById(hashValue);
+
+    if (!element) {
+      return;
+    }
+
+    var header = document.querySelector('header.site-header');
+    var headerRect = header.getBoundingClientRect();
+    var headerTop = Math.floor(headerRect.top);
+    var headerHeight = Math.floor(headerRect.height);
+    var scrollPos = getScrollPos();
+    var offsetY = element.offsetTop - (headerTop + headerHeight + 20);
+
+    if (offsetY == scrollPos.y) {
+      return;
+    }
+
+    if (headerTop == 0  && offsetY > scrollPos.y) {
+      offsetY += headerHeight + 2;
+    } else if (headerTop < 0  && offsetY < scrollPos.y) {
+      offsetY -= headerHeight - 2;
+    }
+
+    smoothScrollTo(offsetY);
+  }
+
+  // The first event occurred
+  window.addEventListener('load', function(event) {
+    if (window.location.hash) {
+      hashLocate(window.location.hash);
+    }
+  });
+
+  // The first event occurred
+  window.addEventListener('click', function(event) {
+    if (event.target.tagName.toLowerCase() == 'a') {
+      hashLocate(event.target.getAttribute('href'));
+    }
+  });
+</script>
+<div class="theme-toggle">
+  <input type="checkbox" id="theme-switch">
+  <label for="theme-switch">
+    <div class="toggle"></div>
+    <div class="names">
+      <p class="light">Light</p>
+      <p class="dark">Dark</p>
+    </div>
+  </label>
+</div>
+
+
+
+
+<script>
+  (function() {
+    var sw = document.getElementById('theme-switch');
+    var html = document.getElementsByTagName('html')[0];
+    var nightModeOption = ('off' || 'auto').toLowerCase();
+    var storage = nightModeOption === 'manual'
+        ? localStorage
+        : sessionStorage;
+    var themeData = loadThemeData();
+
+    function saveThemeData(data) {
+      storage.setItem('theme', JSON.stringify(data));
+    }
+
+    function loadThemeData() {
+      var data = storage.getItem('theme');
+      try {
+        data = JSON.parse(data ? data : '');
+      } catch(e) {
+        data = { nightShift: undefined, autoToggleAt: 0 };
+        saveThemeData(data);
+      }
+      return data;
+    }
+
+    function handleThemeToggle(nightShift) {
+      themeData.nightShift = nightShift;
+      saveThemeData(themeData);
+      html.dataset.theme = nightShift ? 'dark' : 'light';
+      setTimeout(function() {
+        sw.checked = nightShift ? true : false;
+      }, 50);
+    }
+
+    function autoThemeToggle() {
+      // Next time point of theme toggle
+      var now = new Date();
+      var toggleAt = new Date();
+      var hours = now.getHours();
+      var nightShift = hours >= 19 || hours <=7;
+
+      if (nightShift) {
+        if (hours > 7) {
+          toggleAt.setDate(toggleAt.getDate() + 1);
+        }
+        toggleAt.setHours(7);
+      } else {
+        toggleAt.setHours(19);
+      }
+
+      toggleAt.setMinutes(0);
+      toggleAt.setSeconds(0);
+      toggleAt.setMilliseconds(0)
+
+      var delay = toggleAt.getTime() - now.getTime();
+
+      // auto toggle theme mode
+      setTimeout(function() {
+        handleThemeToggle(!nightShift);
+      }, delay);
+
+      return {
+        nightShift: nightShift,
+        toggleAt: toggleAt.getTime()
+      };
+    }
+
+    // Listen the theme toggle event
+    sw.addEventListener('change', function(event) {
+      handleThemeToggle(event.target.checked);
+    });
+
+    if (nightModeOption == 'auto') {
+      var data = autoThemeToggle();
+
+      // Toggle theme by local setting
+      if (data.toggleAt > themeData.autoToggleAt) {
+        themeData.autoToggleAt = data.toggleAt;
+        handleThemeToggle(data.nightShift);
+      } else {
+        handleThemeToggle(themeData.nightShift);
+      }
+    } else if (nightModeOption == 'manual') {
+      handleThemeToggle(themeData.nightShift);
+    } else {
+      var nightShift = themeData.nightShift;
+      if (nightShift === undefined) {
+        nightShift = nightModeOption === 'on';
+      }
+      handleThemeToggle(nightShift);
+    }
+  })();
+</script>
+<div id="click-to-top" class="click-to-top">
+  <i class="fa fa-arrow-up"></i>
+</div>
+<script>
+  (function () {
+    const clickToTop = document.getElementById('click-to-top');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 100) {
+        clickToTop.classList.add('show')
+      }else {
+        clickToTop.classList.remove('show')
+      }
+    });
+    clickToTop.addEventListener('click', () => {
+      window.smoothScrollTo(0);
+    });
+  })();
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js"></script>
+      <script type="text/javascript">
+        (function(){
+          // Initial mermaid
+          mermaid.init({startOnLoad:true}, "pre code.language-mermaid", function(){
+            // Change <pre> and <code> block style
+            var codeBlock = document.querySelector('code.language-mermaid');
+            var preBlock = codeBlock.parentNode;
+
+            codeBlock.style.backgroundColor = 'initial';
+            preBlock.style.border = 'none';
+            preBlock.style.textAlign = 'center';
+            preBlock.style.backgroundColor = 'initial';
+          });
+        })()
+      </script><main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <div class="framework">
+  <section class="main">
+
+     <div class="post">
+  <section>
+
+
+
+
+
+
+
+
+
+<article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <div class="post-content e-content" itemprop="articleBody">
+
+      <blockquote>
+  <p>A thread pool implemented in modern C++.</p>
+
+  <p>代码已开源在 <a href="https://github.com/Razirp/ThreadPool">GitHub</a>。</p>
+</blockquote>
+
+<h2 id="i-引言">I. 引言</h2>
+
+<p>在现代软件开发中，多线程编程已经成为提高应用程序性能、实现并发任务处理的重要手段。然而，直接管理多个线程往往伴随着复杂性增加、资源浪费和同步问题。为了解决这些问题，<strong>线程池</strong>作为一种有效的线程管理机制应运而生。</p>
+
+<p><strong>线程池</strong>预先创建一组工作线程，将待执行任务提交到线程池，由池内线程负责任务的分配与执行，从而简化线程管理、减少系统频繁创建与销毁线程的开销、提高资源利用率。</p>
+
+<p>当前现有的 C++ 线程池实现往往难以在简单易用性和文档的丰富性上取得平衡：</p>
+
+<ul>
+  <li>具有良好文档说明的 C++ 线程池项目常常规模庞大、依赖复杂，难以快速理解或上手使用；</li>
+  <li>实现简单的 C++ 项目往往缺乏足够的文档说明，开发者需要自行阅读源代码来理解其实现原理与使用方式。</li>
+</ul>
+
+<p>此外对于像作者一样的以中文为母语的开发者（这一群体属实人数众多🥸）而言，我们常常感到缺乏足够的拥有中文文档的项目可供研究（甚至很多项目即使是由中国开发者开发的，它们的文档仍然是英文🥲），往往需要被迫使用英语等非母语语言进行文档的阅读，不能达到最佳效率。</p>
+
+<p>针对上述问题，作者希望能够实现一个<strong>简单易用</strong>并且具有丰富<strong>中/英文文档</strong>说明的 C++ 线程池库，以期能够助力于开发者社区的学习、研究与使用。</p>
+
+<blockquote>
+  <p>代码已开源在 <a href="https://github.com/Razirp/ThreadPool">GitHub</a>。</p>
+</blockquote>
+
+<h3 id="线程池的优势">线程池的优势</h3>
+
+<h4 id="资源管理与性能优化">资源管理与性能优化</h4>
+
+<ul>
+  <li>
+<strong>避免频繁创建与销毁线程</strong>：线程池预先创建并维护一定数量的工作线程，避免了频繁创建和销毁线程带来的系统开销，特别是在处理大量短生命周期任务时，效果尤为显著。</li>
+  <li>
+<strong>均衡负载与缓存局部性</strong>：线程池可以根据任务负载动态调整线程工作状态，避免过度竞争和闲置。同时，线程在执行任务过程中可以充分利用CPU缓存，提高执行效率。</li>
+  <li>
+<strong>控制并发级别</strong>：通过限制线程池大小和任务队列容量，可以有效控制系统的并发级别，防止因过度并发导致的资源争抢和性能下降。</li>
+</ul>
+
+<h4 id="简化编程模型">简化编程模型</h4>
+
+<ul>
+  <li>
+<strong>统一任务提交接口</strong>：线程池提供统一的接口供开发者提交任务，无需关心线程创建、同步等底层细节，降低了多线程编程的复杂度。</li>
+  <li>
+<strong>异常处理与任务取消</strong>：线程池通常支持异常处理机制和任务取消功能，使得在出现异常情况或需求变更时，可以更方便地管理和调整任务执行。
+    <ul>
+      <li>但本项目目前还未针对这一方面进行特别的实现🥲。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="ii-设计概览">II. 设计概览</h2>
+
+<div class="mermaid">
+classDiagram
+    class thread_pool {
+        +thread_pool(std::size_t initial_thread_count, std::size_t max_task_count)
+        +~thread_pool()
+        +template &lt;typename F, typename... Args&gt; std::future&lt;decltype(f(args...))&gt; submit(F &amp;&amp;f, Args &amp;&amp;...args)
+        +void pause()
+        +void resume()
+        +void shutdown()
+        +void shutdown_now()
+        +void terminate()
+        +void wait()
+        +void add_thread(std::size_t count_to_add)
+        +void remove_thread(std::size_t count_to_remove)
+        +void set_max_task_count(std::size_t count_to_set)
+        +std::size_t get_thread_count()
+        +std::size_t get_task_count()
+    }
+    class worker_thread {
+        +worker_thread(thread_pool *pool)
+        +~worker_thread()
+        +void run()
+        +void wake_up()
+        +void block()
+        +bool is_running() const
+        +bool is_waiting_for_task() const
+        +bool is_paused() const
+        +bool is_terminating() const
+    }
+    thread_pool --&gt; worker_thread : manages
+</div>
+
+<h3 id="库架构">库架构</h3>
+
+<p>线程池采用了模块化设计，主要由以下几个核心组件构成：</p>
+
+<ol>
+  <li>
+    <p><strong><code class="language-plaintext highlighter-rouge">thread_pool</code> 类</strong>：作为用户直接交互的接口，负责任务调度、线程管理等核心功能。用户通过创建 <code class="language-plaintext highlighter-rouge">thread_pool</code> 实例提交任务，控制线程池状态，并获取线程池相关信息。</p>
+
+    <blockquote>
+      <p><a href="https://github.com/Razirp/ThreadPool/blob/main/docs/API%20docs/thread_pool.md">点此</a>查看 <code class="language-plaintext highlighter-rouge">thread_pool</code> 类的 API 参考文档。</p>
+    </blockquote>
+  </li>
+  <li>
+    <p><strong><code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类</strong>：作为线程池内部的工作单元，每个 <code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 对象代表一个独立的工作线程，负责从任务队列中取出任务并执行。</p>
+
+    <blockquote>
+      <p><a href="https://github.com/Razirp/ThreadPool/blob/main/docs/API%20docs/worker_thread.md">点此</a>查看 <code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类的 API 参考文档。</p>
+    </blockquote>
+  </li>
+  <li>
+    <p><strong>辅助工具</strong>：包括同步原语（如互斥锁、条件变量、信号量等）以及状态管理机制，它们为线程池和工作线程之间的通信、任务同步、状态变更等操作提供了必要的支撑。</p>
+  </li>
+</ol>
+
+<p>各组件间的关系如下：</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">thread_pool</code> 类维护一个工作线程列表 <code class="language-plaintext highlighter-rouge">std::list&lt;worker_thread&gt;</code>，并通过同步原语控制任务队列的访问与状态变更。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类通过与 <code class="language-plaintext highlighter-rouge">thread_pool</code> 对象的交互，获取待执行任务、更新自身状态，并响应来自 <code class="language-plaintext highlighter-rouge">thread_pool</code> 的指令（如暂停、恢复、终止等）。</li>
+  <li>辅助工具贯穿于整个库的设计与实现中，确保并发环境下的数据一致性与操作安全性。</li>
+</ul>
+
+<h3 id="关键类与接口">关键类与接口</h3>
+
+<h4 id="thread_pool-类">
+<code class="language-plaintext highlighter-rouge">thread_pool</code> 类</h4>
+
+<p><strong>功能定位</strong>：<code class="language-plaintext highlighter-rouge">thread_pool</code> 类是用户与线程池库交互的主要入口，封装了线程池创建、任务提交、状态控制、属性调整与信息获取等核心功能。</p>
+
+<p><strong>主要API</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>构造函数</strong>：接受初始工作线程数和最大任务队列容量作为参数，创建并初始化线程池。</p>
+  </li>
+  <li>
+    <p><strong>任务提交</strong>：提供模板方法 <code class="language-plaintext highlighter-rouge">submit</code>，接受可调用对象（如函数、lambda 表达式）及参数，将其封装为任务提交至任务队列，并返回一个 <code class="language-plaintext highlighter-rouge">std::future</code> 对象，用于获取任务执行结果。</p>
+  </li>
+  <li>
+<strong>线程池控制</strong>：
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">pause</code></strong>：暂停线程池，阻止新任务的执行并暂停当前运行的任务。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">resume</code></strong>：恢复线程池的运行，继续处理队列中的任务。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">shutdown</code></strong>：设置线程池为等待任务完成状态，等待所有已提交任务执行完毕后终止线程池。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">shutdown_now</code></strong>：立即终止线程池，丢弃任务队列中的未处理任务。</li>
+    </ul>
+  </li>
+  <li>
+<strong>属性调整与信息获取</strong>：
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">add_thread</code></strong>：动态向线程池添加工作线程。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">remove_thread</code></strong>：从线程池中移除指定数量的工作线程。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">set_max_task_count</code></strong>：限制任务队列中允许的最大任务数量。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">get_thread_count</code></strong>：查询当前线程池中活动的工作线程数。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">get_task_count</code></strong>：查询等待执行的任务数量。</li>
+    </ul>
+  </li>
+</ul>
+
+<h4 id="thread_poolworker_thread-类内部实现">
+<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类（内部实现）</h4>
+
+<p><strong>功能定位</strong>：<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类是线程池内部的工作单元，负责从任务队列中取出任务并执行。其状态机模型、任务循环逻辑以及响应线程池指令的方式直接影响线程池的性能与稳定性。</p>
+
+<p><strong>内部状态与行为</strong>：</p>
+
+<ul>
+  <li>
+<strong>状态机</strong>：<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 对象具有多种状态（如运行、暂停、等待任务、将终止、已终止等），通过状态机模型管理状态变迁。</li>
+  <li>
+<strong>任务循环</strong>：每个工作线程在一个无限循环中，根据自身状态执行相应操作，如从任务队列取任务、执行任务、响应线程池指令（如暂停、恢复、终止）等。</li>
+  <li>
+<strong>响应指令</strong>：通过监听线程池状态变更信号和条件变量，<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 能够及时响应来自 <code class="language-plaintext highlighter-rouge">thread_pool</code> 的指令，调整自身状态并执行相应操作。</li>
+</ul>
+
+<h2 id="iii-实现细节剖析">III. 实现细节剖析</h2>
+
+<h3 id="线程池核心机制">线程池核心机制</h3>
+
+<h4 id="任务队列">任务队列</h4>
+
+<p><strong>数据结构选择</strong>：任务队列采用 <code class="language-plaintext highlighter-rouge">std::queue</code> 实现，它是一种先进先出（FIFO）的数据结构，符合线程池任务调度的基本原则——按提交顺序依次执行。</p>
+
+<p><strong>同步机制</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>互斥锁</strong>：使用 <code class="language-plaintext highlighter-rouge">std::shared_mutex</code> 保护任务队列的访问，确保在多线程环境下对任务队列的操作是线程安全的。读取任务队列状态（如查询任务数量）时使用 <code class="language-plaintext highlighter-rouge">std::shared_lock</code>，仅需读取权限；向队列添加或移除任务时使用 <code class="language-plaintext highlighter-rouge">std::unique_lock</code>，需要独占访问权限。</p>
+  </li>
+  <li>
+    <p><strong>条件变量</strong>：使用 <code class="language-plaintext highlighter-rouge">std::condition_variable_any</code> 协调线程间的同步。当任务队列为空时，等待任务的线程会被阻塞，直到有新任务入队或线程池状态发生改变时，通过条件变量唤醒等待的线程。</p>
+  </li>
+</ul>
+
+<h4 id="工作线程管理">工作线程管理</h4>
+
+<p><strong>创建与销毁</strong>：在 <code class="language-plaintext highlighter-rouge">thread_pool</code> 构造函数中创建指定数量的工作线程，并将它们加入工作线程列表。线程池析构时，通过调用<code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code>的<code class="language-plaintext highlighter-rouge">terminate</code>方法终止所有工作线程，并等待其退出。</p>
+
+<p><strong>状态切换</strong>：</p>
+
+<ul>
+  <li>
+<strong>线程状态</strong>：使用 <code class="language-plaintext highlighter-rouge">std::atomic&lt;&gt;</code> 存储线程状态，确保在多线程环境下状态变更的原子性。
+    <ul>
+      <li>
+<code class="language-plaintext highlighter-rouge">std::atomic&lt;&gt;</code> 是 C++ 标准库中的原子变量类型，可以保证对该类型的对象的读/写等操作是原子的。</li>
+    </ul>
+  </li>
+  <li>
+<strong>同步原语</strong>：
+    <ul>
+      <li>
+<strong>互斥锁</strong>：保护线程状态的访问，确保状态变更操作的原子性。</li>
+      <li>
+<strong>条件变量</strong>：用于工作线程等待任务、响应线程池指令等场景，实现线程间的同步。</li>
+      <li>
+<strong>信号量</strong>：在 <code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 类中使用 <code class="language-plaintext highlighter-rouge">std::binary_semaphore</code> 实现线程的暂停与恢复。</li>
+    </ul>
+  </li>
+</ul>
+
+<h4 id="线程池状态机">线程池状态机</h4>
+
+<div class="mermaid">
+stateDiagram-v2
+    [*] --&gt; RUNNING : 初始化
+    RUNNING --&gt; PAUSED : 暂停-pause()
+    PAUSED --&gt; RUNNING : 恢复-resume()
+    RUNNING --&gt; SHUTDOWN : shutdown()
+    RUNNING --&gt; TERMINATING : shutdown_now()/terminate()
+    PAUSED --&gt; TERMINATING : shutdown_now()/terminate()
+    SHUTDOWN --&gt; TERMINATING : 所有任务完成
+    TERMINATING --&gt; TERMINATED : 所有线程终止
+</div>
+
+<p><strong>状态枚举定义</strong>：定义了如<code class="language-plaintext highlighter-rouge">RUNNING</code>、<code class="language-plaintext highlighter-rouge">PAUSED</code>、<code class="language-plaintext highlighter-rouge">SHUTDOWN</code>等状态枚举值，用于表示线程池的不同运行状态。</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="k">class</span> <span class="nc">status_t</span> <span class="o">:</span> <span class="n">std</span><span class="o">::</span><span class="kt">int8_t</span> <span class="p">{</span> 
+        <span class="n">TERMINATED</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> 
+        <span class="n">TERMINATING</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> 
+        <span class="n">RUNNING</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+        <span class="n">PAUSED</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> 
+        <span class="n">SHUTDOWN</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="p">};</span>  <span class="c1">// 线程池的状态，-1: 线程池已终止；0: 线程池将终止；1: 线程池正在运行；2: 线程池被暂停；3: 线程池在等待任务完成，但不再接受新任务</span>
+</code></pre></div></div>
+
+<p><strong>状态变更操作</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>原子性保证</strong>：通过在状态变更操作前后加锁解锁 <code class="language-plaintext highlighter-rouge">status_mutex</code>，确保状态变更的原子性。</p>
+  </li>
+  <li>
+    <p><strong>并发安全性</strong>：在状态变更时，通过检查当前状态并相应地调整线程池及工作线程的行为，确保在并发环境下的正确性与一致性。</p>
+  </li>
+</ul>
+
+<h3 id="任务调度与执行">任务调度与执行</h3>
+
+<div class="mermaid">
+graph TD
+    subgraph 线程池
+    TP(thread_pool)
+    end
+
+    subgraph 工作线程
+    WT(worker_thread)
+    end
+
+    U\[用户] --&gt; |提交任务| TP
+    TP --&gt;|任务入队| TP
+    TP --&gt;|提示工作线程有新任务| WT
+    WT --&gt;|等待任务| WT
+    WT --&gt;|取任务| WT
+    WT --&gt;|执行任务| WT
+    WT --&gt;|将任务队列取至空时提示线程池| TP
+</div>
+
+<h4 id="任务提交">任务提交</h4>
+
+<p><strong><code class="language-plaintext highlighter-rouge">submit</code> 方法实现</strong>：</p>
+
+<blockquote>
+  <p>代码见 <a href="https://github.com/Razirp/ThreadPool/blob/main/include/thread_pool.hpp">GitHub</a> 或 <a href="##`submit()`%20%E4%BB%BB%E5%8A%A1%E6%8F%90%E4%BA%A4%E5%87%BD%E6%95%B0">附录</a>。</p>
+</blockquote>
+
+<ol>
+  <li>
+    <p><strong>模板函数包装</strong>：接受可调用对象（如函数、lambda表达式）及参数，利用模板参数推导，将任务及其参数封装为一个无参的 <code class="language-plaintext highlighter-rouge">std::function&lt;void()&gt;</code>。</p>
+
+    <blockquote>
+      <p>封装为无参函数对象是为了，在工作线程中可以用统一的格式（直接用 <code class="language-plaintext highlighter-rouge">()</code> 进行调用）对任何形式的任务进行调用执行。</p>
+    </blockquote>
+  </li>
+  <li>
+    <p><strong>任务封装</strong>：使用 <code class="language-plaintext highlighter-rouge">std::packaged_task</code> 将任务包装为可获取异步结果的对象，并通过其 <code class="language-plaintext highlighter-rouge">get_future</code> 方法获取一个 <code class="language-plaintext highlighter-rouge">std::future</code>，用于后续获取任务执行结果。</p>
+  </li>
+  <li>
+    <p><strong>入队</strong>：在确保线程池状态稳定的前提下，将任务放入任务队列，并通过条件变量通知等待任务的工作线程。</p>
+  </li>
+</ol>
+
+<h4 id="工作线程任务循环">工作线程任务循环</h4>
+
+<p><strong>逻辑流程</strong>：</p>
+
+<blockquote>
+  <p>代码见 <a href="https://github.com/Razirp/ThreadPool/blob/main/src/worker_thread.cpp">GitHub</a> 或 <a href="##%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%BB%BB%E5%8A%A1%E5%BE%AA%E7%8E%AF%E7%9A%84%E9%80%BB%E8%BE%91">附录</a>。</p>
+</blockquote>
+
+<ol>
+  <li>
+    <p><strong>获取任务</strong>：在循环中，工作线程首先检查线程池状态，根据状态决定是否继续执行任务或进行其他操作（如暂停、等待任务、终止等）。</p>
+  </li>
+  <li>
+    <p><strong>执行任务</strong>：从任务队列中取出任务并执行。如果任务执行过程中抛出异常，捕获并记录异常信息，然后继续处理下一个任务。</p>
+  </li>
+  <li>
+    <p><strong>等待新任务</strong>：当任务队列为空时，工作线程进入等待状态，直到有新任务入队或线程池状态变化时被唤醒。</p>
+  </li>
+  <li>
+    <p><strong>响应线程池指令</strong>：根据线程池状态变更，如接收到暂停、恢复、终止等指令，工作线程调整自身状态并执行相应操作。</p>
+  </li>
+</ol>
+
+<h2 id="iv-库特性与优化">IV. 库特性与优化</h2>
+
+<h3 id="动态线程调整">动态线程调整</h3>
+
+<div class="mermaid">
+sequenceDiagram
+    participant 用户
+    participant 线程池
+    participant 工作线程
+
+    用户-&gt;&gt;线程池: add_thread(count)
+    线程池-&gt;&gt;工作线程: 实例化 count 个工作线程对象
+    工作线程--&gt;&gt;线程池: 工作线程创建完毕
+
+    用户-&gt;&gt;线程池: remove_thread(count)
+    线程池-&gt;&gt;工作线程: 终止并析构 count 个工作线程对象
+    工作线程--&gt;&gt;线程池: 工作线程终止并析构完毕
+</div>
+
+<p><strong><code class="language-plaintext highlighter-rouge">add_thread</code> 与 <code class="language-plaintext highlighter-rouge">remove_thread</code> 方法</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>实现</strong>：这两个方法允许用户在运行时动态调整线程池中的工作线程数量。<code class="language-plaintext highlighter-rouge">add_thread</code> 创建新的 <code class="language-plaintext highlighter-rouge">thread_pool::worker_thread</code> 对象并加入工作线程列表， <code class="language-plaintext highlighter-rouge">remove_thread</code> 则选择适当的工作线程终止并从列表中移除。</p>
+
+    <ul>
+      <li>
+        <blockquote>
+          <p>当想要移除的线程数量大于等于当前工作线程数时，会将所有的工作线程移除。</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>使用场景</strong>：在任务负载变化较大或需要针对特定硬件资源进行优化时，动态调整工作线程数有助于保持良好的系统性能。例如，当任务数量激增时，增加工作线程可以充分利用多核处理器，提高任务处理速度；反之，在任务稀疏时减少工作线程，可避免资源浪费和过度竞争。</p>
+  </li>
+</ul>
+
+<p><strong>性能影响分析</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>积极影响</strong>：动态调整线程数有助于适应负载波动，避免线程过多导致的上下文切换开销和资源争抢，或线程过少导致的处理器利用率低下。</p>
+  </li>
+  <li>
+    <p><strong>注意事项</strong>：频繁调整线程数可能导致性能波动和额外开销。应根据实际应用需求和监控数据，适度、适时地调整线程数，以达到最佳性能平衡。</p>
+  </li>
+</ul>
+
+<h4 id="任务队列容量限制">任务队列容量限制</h4>
+
+<p><strong><code class="language-plaintext highlighter-rouge">set_max_task_count</code> 方法</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>实现</strong>：该方法用于设置任务队列允许的最大任务数量。当任务队列接近或达到最大容量时，新提交的任务将被拒绝，返回一个错误提示。</p>
+  </li>
+  <li>
+    <p><strong>应用场景</strong>：在处理高优先级任务或资源有限的场景下，限制任务队列容量有助于避免低优先级任务积压，确保高优先级任务得到及时处理。此外，也可以通过调整任务队列容量来控制系统的内存使用，防止因任务堆积导致的内存溢出。</p>
+
+    <ul>
+      <li>
+        <blockquote>
+          <p>对任务优先级的特性还有待实现。</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>拒绝策略</strong>：</p>
+
+<ul>
+  <li>
+<strong>抛出异常</strong>：当任务队列满且新任务被拒绝时，<code class="language-plaintext highlighter-rouge">submit</code> 方法抛出 <code class="language-plaintext highlighter-rouge">std::runtime_error</code> 异常，通知调用者无法提交任务。</li>
+</ul>
+
+<h3 id="线程池优雅关闭与即时终止">线程池优雅关闭与即时终止</h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">shutdown</code> 与 <code class="language-plaintext highlighter-rouge">shutdown_now</code> 方法</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>优雅关闭</strong>：<code class="language-plaintext highlighter-rouge">shutdown</code> 方法将线程池设置为等待任务完成状态，允许已提交的任务继续执行，但不再接受新任务。所有任务完成后，线程池自动终止。</p>
+  </li>
+  <li>
+    <p><strong>即时终止</strong>：<code class="language-plaintext highlighter-rouge">shutdown_now</code> 方法立即停止线程池，丢弃任务队列中的未处理任务，工作线程立即结束执行。</p>
+  </li>
+</ul>
+
+<p><strong>资源清理与完整性</strong>：</p>
+
+<ul>
+  <li>
+    <p><strong>资源释放</strong>：在终止线程池时，确保所有工作线程被正确地终止并等待其退出，同时清理相关资源，如释放互斥锁、条件变量等。</p>
+  </li>
+  <li>
+    <p><strong>任务完整性</strong>：使用 <code class="language-plaintext highlighter-rouge">shutdown</code> 方法可以保证所有已提交任务得到完整执行，适用于需要保证任务结果的场景；而 <code class="language-plaintext highlighter-rouge">shutdown_now</code> 适用于紧急情况或测试环境，可能牺牲部分未完成任务的完整性。</p>
+  </li>
+</ul>
+
+<h2 id="v-示例代码与应用示例">V. 示例代码与应用示例</h2>
+
+<h3 id="基础使用示例">基础使用示例</h3>
+
+<p>以下是一个使用C++线程池库的基本示例，展示了如何创建线程池、提交不同类型任务、控制线程池状态等操作。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">"thread_pool.hpp"</span><span class="cp">
+</span>
+<span class="c1">// 定义一个简单的计算任务</span>
+<span class="kt">double</span> <span class="nf">compute</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="n">y</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 创建一个初始包含4个工作线程的线程池，任务队列最大容量为100</span>
+    <span class="n">thread_utils</span><span class="o">::</span><span class="n">thread_pool</span> <span class="n">pool</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">100</span><span class="p">);</span>
+
+    <span class="c1">// 提交一个计算任务，返回结果的future</span>
+    <span class="k">auto</span> <span class="n">future</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">compute</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+
+    <span class="c1">// 提交一个lambda任务</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">([]()</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Hello from a lambda task!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="p">});</span>
+
+    <span class="c1">// 暂停线程池，阻止新任务的执行</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">pause</span><span class="p">();</span>
+
+    <span class="c1">// ...在此期间可以进行其他操作...</span>
+
+    <span class="c1">// 恢复线程池，继续处理任务</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">resume</span><span class="p">();</span>
+
+    <span class="c1">// 等待计算任务完成并获取结果</span>
+    <span class="kt">double</span> <span class="n">result</span> <span class="o">=</span> <span class="n">future</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Result: "</span> <span class="o">&lt;&lt;</span> <span class="n">result</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// 关闭线程池，等待所有任务完成</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="实际应用案例">实际应用案例</h3>
+
+<p>假设我们正在开发一个Web服务器，需要处理大量并发的HTTP请求。使用C++线程池库，可以简化请求处理的多线程编程，提高服务器性能。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">"thread_pool.hpp"</span><span class="cp">
+#include</span> <span class="cpf">"http_request.h"</span><span class="c1">  // 假设已定义HttpRequest类</span><span class="cp">
+</span>
+<span class="c1">// 定义处理HTTP请求的回调函数</span>
+<span class="kt">void</span> <span class="nf">handle_request</span><span class="p">(</span><span class="k">const</span> <span class="n">HttpRequest</span><span class="o">&amp;</span> <span class="n">request</span><span class="p">,</span> <span class="n">HttpResponse</span><span class="o">&amp;</span> <span class="n">response</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// ...实际处理逻辑...</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 创建一个初始包含8个工作线程的线程池，任务队列无容量限制</span>
+    <span class="n">thread_utils</span><span class="o">::</span><span class="n">thread_pool</span> <span class="n">pool</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+
+    <span class="c1">// 循环接收并处理HTTP请求</span>
+    <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">HttpRequest</span> <span class="n">request</span> <span class="o">=</span> <span class="n">receive_request</span><span class="p">();</span>  <span class="c1">// 假设receive_request从网络接收一个请求</span>
+        <span class="n">HttpResponse</span> <span class="n">response</span><span class="p">;</span>
+
+        <span class="c1">// 将请求处理任务提交到线程池</span>
+        <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">([</span><span class="n">request</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">response</span><span class="p">]()</span> <span class="p">{</span>
+            <span class="n">handle_request</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">);</span>
+            <span class="n">send_response</span><span class="p">(</span><span class="n">response</span><span class="p">);</span>  <span class="c1">// 假设send_response将处理结果发送回客户端</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ...在适当时候调用pool.shutdown()关闭线程池...</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr>
+
+<p>以上示例代码展示了如何在实际项目中使用C++线程池库提交并行任务、控制线程池状态以及处理特定应用需求。通过这些示例，读者可以直观地理解库的使用方法，并将其应用到自己的项目中。</p>
+
+<h2 id="vi-性能测试与对比">VI. 性能测试与对比</h2>
+
+<blockquote>
+  <p>限于时间和精力，目前仅对本线程池库进行了简单的功能和性能测试。本部分内容有待进一步工作来完善。同时我们欢迎有兴趣的社区成员向本项目提供您进行的性能测试与对比的基准及其结果！</p>
+</blockquote>
+
+<h3 id="简单的功能测试">简单的功能测试</h3>
+
+<p>简单地测试了一下线程池的任务提交、结果获取、任务抛出异常、暂停/恢复线程池、增加/删除线程、设置最大任务队列长度、终止线程等基本的线程池功能。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;cassert&gt;</span><span class="cp">
+#include</span> <span class="cpf">"thread_pool.hpp"</span><span class="cp">
+</span>
+<span class="c1">// Test function</span>
+<span class="kt">int</span> <span class="nf">add</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// Test function that throws an exception</span>
+<span class="kt">void</span> <span class="nf">throw_exception</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"Test exception"</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Create a thread pool with 4 threads</span>
+    <span class="n">thread_utils</span><span class="o">::</span><span class="n">thread_pool</span> <span class="n">pool</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
+
+    <span class="c1">// Test submitting a task and getting the result</span>
+    <span class="k">auto</span> <span class="n">future</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">future</span><span class="p">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">5</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 1 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Test submitting multiple tasks</span>
+    <span class="k">auto</span> <span class="n">future1</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+    <span class="k">auto</span> <span class="n">future2</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">future1</span><span class="p">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">9</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">future2</span><span class="p">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">13</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 2 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Test submitting tasks that throw exceptions</span>
+    <span class="k">auto</span> <span class="n">future3</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">throw_exception</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">future3</span><span class="p">.</span><span class="n">get</span><span class="p">();</span>
+        <span class="n">assert</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// Should not reach here</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="o">&amp;</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">assert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">())</span> <span class="o">==</span> <span class="s">"Test exception"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 3 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Test pausing and resuming the thread pool</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">pause</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">);</span> <span class="c1">// Should throw exception because pool is paused</span>
+        <span class="n">assert</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// Should not reach here</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="o">&amp;</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">assert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">())</span> <span class="o">==</span> <span class="s">"[thread_pool::submit][error]: thread pool is paused"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">resume</span><span class="p">();</span>
+    <span class="k">auto</span> <span class="n">future4</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">future4</span><span class="p">.</span><span class="n">get</span><span class="p">()</span> <span class="o">==</span> <span class="mi">17</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 4 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Test adding and removing threads from the pool</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">add_thread</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">get_thread_count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span><span class="p">);</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">remove_thread</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+    <span class="n">assert</span><span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">get_thread_count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">3</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 5 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">pool</span><span class="p">.</span><span class="n">get_task_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
+    <span class="p">}</span>
+    <span class="c1">// Test setting the maximum task count</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">set_max_task_count</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+    <span class="k">auto</span> <span class="n">future5</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">);</span>
+    <span class="k">auto</span> <span class="n">future6</span> <span class="o">=</span> <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">13</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">15</span><span class="p">);</span> <span class="c1">// Should throw exception because task queue is full</span>
+        <span class="n">assert</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// Should not reach here</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="o">&amp;</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">assert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">())</span> <span class="o">==</span> <span class="s">"[thread_pool::submit][error]: task queue is full"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 6 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Test shutting down the thread pool</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">17</span><span class="p">);</span> <span class="c1">// Should throw exception because pool is shutting down</span>
+        <span class="n">assert</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span> <span class="c1">// Should not reach here</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="o">&amp;</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">assert</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">())</span> <span class="o">==</span> <span class="s">"[thread_pool::submit][error]: thread pool is terminated"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Test 7 passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"All tests passed!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="简单的性能测试">简单的性能测试</h3>
+
+<p>简单地对比了一下使用线程池和串行执行任务的所需时间的差别。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;chrono&gt;</span><span class="cp">
+#include</span> <span class="cpf">"thread_pool.hpp"</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Create a thread pool object</span>
+    <span class="n">thread_utils</span><span class="o">::</span><span class="n">thread_pool</span> <span class="n">pool</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+
+    <span class="c1">// Define the task to be executed by the thread pool</span>
+    <span class="k">auto</span> <span class="n">task</span> <span class="o">=</span> <span class="p">[]()</span> <span class="p">{</span>
+        <span class="c1">// Perform some computation or task here</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">this_thread</span><span class="o">::</span><span class="n">sleep_for</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">10</span><span class="p">));</span>
+    <span class="p">};</span>
+
+    <span class="c1">// Start the timer</span>
+    <span class="k">auto</span> <span class="n">start</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
+
+    <span class="c1">// Submit the task to the thread pool multiple times</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">pool</span><span class="p">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Wait for all tasks to complete</span>
+    <span class="n">pool</span><span class="p">.</span><span class="n">wait</span><span class="p">();</span>
+
+    <span class="c1">// Stop the timer</span>
+    <span class="k">auto</span> <span class="n">end</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
+
+    <span class="c1">// Calculate the elapsed time</span>
+    <span class="k">auto</span> <span class="n">duration</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">duration_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="o">&gt;</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">).</span><span class="n">count</span><span class="p">();</span>
+
+    <span class="c1">// Print the performance result</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Elapsed time: "</span> <span class="o">&lt;&lt;</span> <span class="n">duration</span> <span class="o">&lt;&lt;</span> <span class="s">" milliseconds"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="c1">// Compare with the performance of executing tasks sequentially</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">task</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">high_resolution_clock</span><span class="o">::</span><span class="n">now</span><span class="p">();</span>
+    <span class="n">duration</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">duration_cast</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="o">&gt;</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">).</span><span class="n">count</span><span class="p">();</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Sequential execution time: "</span> <span class="o">&lt;&lt;</span> <span class="n">duration</span> <span class="o">&lt;&lt;</span> <span class="s">" milliseconds"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="vii-未来展望">VII. 未来展望</h2>
+
+<p>尽管本 C++ 线程池实现已经具备了诸多实用功能和良好性能，但仍有进一步优化和扩展的空间。以下是一些后续计划实现的特性：</p>
+
+<h3 id="计划实现的特性">计划实现的特性</h3>
+
+<ul>
+  <li>
+    <p><strong>更多任务调度策略</strong>：目前仅支持先进先出（FIFO）策略，未来将加入更多调度算法，如优先级调度、定时调度等，以满足不同应用场景的需求。</p>
+  </li>
+  <li>
+    <p><strong>核心线程数与最大线程数概念</strong>：引入核心线程数和最大线程数的概念，使得线程池能在工作负载变化时自动调整线程数量。核心线程始终保留在池中，而最大线程数则限定线程池可动态扩展的上限。</p>
+  </li>
+  <li>
+    <p><strong>任务拒绝策略</strong>：除了现有的队列满时拒绝新任务外，将实现更丰富的任务拒绝策略，并允许用户自定义拒绝策略，以应对任务队列饱和的不同处理需求。</p>
+  </li>
+  <li>
+    <p><strong>深度测试与验证</strong>：进行更全面的功能测试、性能基准测试，包括与现有线程池库的对比分析，以充分展现本库的功能稳定性和性能优势。</p>
+  </li>
+</ul>
+
+<hr>
+
+<p>综上所述，希望这个基于现代 C++ 的线程池实现能够为更多C++开发者的工作提供帮助或启发。</p>
+
+<h2 id="附录-一些关键实现的代码">附录. 一些关键实现的代码</h2>
+
+<h3 id="submit-任务提交函数">
+<code class="language-plaintext highlighter-rouge">submit()</code> 任务提交函数</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/**
+ * Submits a task to the thread pool for execution.
+ *
+ * This function submits a task to the thread pool for execution. The task is a callable object
+ * that takes arguments specified by the template parameters. The function returns a std::future
+ * object that can be used to retrieve the result of the task once it has completed.
+ *
+ * @tparam F The type of the callable object.
+ * @tparam Args The types of the arguments to the callable object.
+ * @param f The callable object to be executed.
+ * @param args The arguments to be passed to the callable object.
+ * @return A std::future object representing the result of the task.
+ * @throws std::runtime_error if the thread pool is in an invalid state or the task queue is full.
+ */</span>
+<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="nc">F</span><span class="p">,</span> <span class="k">typename</span><span class="o">...</span> <span class="nc">Args</span><span class="p">&gt;</span>
+<span class="k">auto</span> <span class="n">thread_pool</span><span class="o">::</span><span class="n">submit</span><span class="p">(</span><span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">f</span><span class="p">,</span> <span class="n">Args</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="k">decltype</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">args</span><span class="p">...))</span><span class="o">&gt;</span>
+<span class="p">{</span>   <span class="c1">// 提交任务</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">status_lock</span><span class="p">(</span><span class="n">status_mutex</span><span class="p">);</span>  <span class="c1">// 为状态变量加共享锁，以确保线程池的状态是稳定的</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="n">status</span><span class="p">.</span><span class="n">load</span><span class="p">())</span>
+    <span class="p">{</span>
+    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">:</span> <span class="c1">// 线程池已终止</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: thread pool is terminated"</span><span class="p">);</span>
+    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATING</span><span class="p">:</span> <span class="c1">// 线程池将终止</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: thread pool is terminating"</span><span class="p">);</span>
+    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">PAUSED</span><span class="p">:</span> <span class="c1">// 线程池被暂停</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: thread pool is paused"</span><span class="p">);</span>
+    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">SHUTDOWN</span><span class="p">:</span> <span class="c1">// 线程池在等待任务完成，但不再接受新任务</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: thread pool is waiting for tasks to complete, but not accepting new tasks"</span><span class="p">);</span>
+    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">:</span> <span class="c1">// 线程池正在运行</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="nl">default:</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: unknown status"</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">max_task_count</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">get_task_count</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">max_task_count</span><span class="p">)</span>
+    <span class="p">{</span>   <span class="c1">// 如果任务队列已满，则拒绝提交任务</span>
+        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::submit][error]: task queue is full"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">using</span> <span class="n">return_type</span> <span class="o">=</span> <span class="k">decltype</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">args</span><span class="p">...));</span>
+    <span class="k">auto</span> <span class="n">task</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">packaged_task</span><span class="o">&lt;</span><span class="n">return_type</span><span class="p">()</span><span class="o">&gt;&gt;</span><span class="p">(</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">bind</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">forward</span><span class="o">&lt;</span><span class="n">F</span><span class="o">&gt;</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="n">std</span><span class="o">::</span><span class="n">forward</span><span class="o">&lt;</span><span class="n">Args</span><span class="o">&gt;</span><span class="p">(</span><span class="n">args</span><span class="p">)...)</span>
+    <span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">future</span><span class="o">&lt;</span><span class="n">return_type</span><span class="o">&gt;</span> <span class="n">res</span> <span class="o">=</span> <span class="n">task</span><span class="o">-&gt;</span><span class="n">get_future</span><span class="p">();</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">lock</span><span class="p">(</span><span class="n">task_queue_mutex</span><span class="p">);</span>
+    <span class="n">task_queue</span><span class="p">.</span><span class="n">emplace</span><span class="p">([</span><span class="n">task</span><span class="p">](){</span> <span class="p">(</span><span class="o">*</span><span class="n">task</span><span class="p">)();</span> <span class="p">});</span> <span class="c1">// 将任务封装为一个lambda表达式并放入任务队列   // 该lambda表达式会调用std::packaged_task对象的operator()方法，从而执行任务</span>
+    <span class="n">lock</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+    <span class="n">task_queue_cv</span><span class="p">.</span><span class="n">notify_one</span><span class="p">();</span>
+    <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="工作线程任务循环的逻辑">工作线程任务循环的逻辑</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">thread_pool</span><span class="o">::</span><span class="n">worker_thread</span><span class="o">::</span><span class="n">worker_thread</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">)</span> <span class="o">:</span> 
+    <span class="n">pool</span><span class="p">(</span><span class="n">pool</span><span class="p">),</span> 
+    <span class="n">status</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">),</span> 
+    <span class="n">pause_sem</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> 
+    <span class="kr">thread</span><span class="p">(</span>
+        <span class="p">[</span><span class="k">this</span><span class="p">](){</span>       <span class="c1">// 线程的执行逻辑</span>
+            <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span>
+            <span class="p">{</span>   
+                <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">unique_lock_status</span><span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">status_mutex</span><span class="p">);</span>
+                <span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span>
+                <span class="p">{</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">unique_lock_status</span><span class="p">.</span><span class="n">owns_lock</span><span class="p">())</span>
+                    <span class="p">{</span>
+                        <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+                    <span class="p">}</span>
+                    <span class="kt">bool</span> <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+                    <span class="k">switch</span> <span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">load</span><span class="p">())</span>
+                    <span class="p">{</span>
+                    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATING</span><span class="p">:</span> <span class="c1">// 线程被设置为将终止</span>
+                        <span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">);</span>
+                    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">:</span>  <span class="c1">// 线程已终止</span>
+                        <span class="k">return</span><span class="p">;</span>
+                    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">:</span> <span class="c1">// 线程被设置为运行</span>
+                        <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">PAUSED</span><span class="p">:</span>   <span class="c1">// 线程被设置为暂停</span>
+                        <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                        <span class="k">this</span><span class="o">-&gt;</span><span class="n">pause_sem</span><span class="p">.</span><span class="n">acquire</span><span class="p">();</span>  <span class="c1">// 阻塞线程</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">BLOCKED</span><span class="p">:</span>  <span class="c1">// 线程被设置为等待任务</span>
+                    <span class="nl">default:</span>    <span class="c1">// 未知状态</span>
+                        <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                        <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::worker_thread::worker_thread][error]: undefined status"</span><span class="p">);</span>
+                    <span class="p">}</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">break_flag</span><span class="p">)</span>
+                    <span class="p">{</span>
+                        <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="c1">// 在运行状态下，从任务队列中取出一个任务并执行</span>
+                <span class="n">std</span><span class="o">::</span><span class="n">unique_lock</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_mutex</span><span class="o">&gt;</span> <span class="n">unique_lock_task_queue</span><span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue_mutex</span><span class="p">);</span>    <span class="c1">// 在取任务前，加锁</span>
+                <span class="k">while</span> <span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span>
+                <span class="p">{</span>   <span class="c1">// 如果任务队列为空，则等待条件变量唤醒</span>
+                    <span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span>
+                    <span class="p">{</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">unique_lock_status</span><span class="p">.</span><span class="n">owns_lock</span><span class="p">())</span>
+                        <span class="p">{</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+                        <span class="p">}</span>
+                        <span class="kt">bool</span> <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+                        <span class="k">switch</span> <span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">load</span><span class="p">())</span>
+                        <span class="p">{</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATING</span><span class="p">:</span> <span class="c1">// 线程被设置为将终止</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">);</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">:</span>  <span class="c1">// 线程已终止</span>
+                            <span class="k">return</span><span class="p">;</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">PAUSED</span><span class="p">:</span>  <span class="c1">// 线程被设置为暂停</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">pause_sem</span><span class="p">.</span><span class="n">acquire</span><span class="p">();</span>  <span class="c1">// 阻塞线程</span>
+                            <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">:</span> <span class="c1">// 线程被设置为运行</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">BLOCKED</span><span class="p">);</span>  <span class="c1">// 设置线程状态为等待任务</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">BLOCKED</span><span class="p">:</span>  <span class="c1">// 线程被设置为等待任务</span>
+                            <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="nl">default:</span>    <span class="c1">// 未知状态</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::worker_thread::worker_thread][error]: unknown status"</span><span class="p">);</span>
+                        <span class="p">}</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">break_flag</span><span class="p">)</span>
+                        <span class="p">{</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="p">}</span>
+                    <span class="p">}</span>
+                    <span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue_cv</span><span class="p">.</span><span class="n">wait</span><span class="p">(</span><span class="n">unique_lock_task_queue</span><span class="p">);</span> <span class="c1">// 等待条件变量唤醒；</span>
+                    <span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span>
+                    <span class="p">{</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">unique_lock_status</span><span class="p">.</span><span class="n">owns_lock</span><span class="p">())</span>
+                        <span class="p">{</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+                        <span class="p">}</span>
+                        <span class="kt">bool</span> <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+                        <span class="k">switch</span> <span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">load</span><span class="p">())</span>
+                        <span class="p">{</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATING</span><span class="p">:</span> <span class="c1">// 线程被设置为将终止</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">);</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">TERMINATED</span><span class="p">:</span>  <span class="c1">// 线程已终止</span>
+                            <span class="k">return</span><span class="p">;</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">PAUSED</span><span class="p">:</span>  <span class="c1">// 线程被设置为暂停</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">pause_sem</span><span class="p">.</span><span class="n">acquire</span><span class="p">();</span>  <span class="c1">// 阻塞线程</span>
+                            <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">lock</span><span class="p">();</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">BLOCKED</span><span class="p">:</span>  <span class="c1">// 线程被设置为等待任务</span>
+                            <span class="k">this</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">.</span><span class="n">store</span><span class="p">(</span><span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">);</span>  <span class="c1">// 设置线程状态为运行</span>
+                        <span class="k">case</span> <span class="n">status_t</span><span class="o">::</span><span class="n">RUNNING</span><span class="p">:</span> <span class="c1">// 线程被设置为运行</span>
+                            <span class="n">break_flag</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="nl">default:</span>    <span class="c1">// 未知状态</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">throw</span> <span class="n">std</span><span class="o">::</span><span class="n">runtime_error</span><span class="p">(</span><span class="s">"[thread_pool::worker_thread::worker_thread][error]: unknown status"</span><span class="p">);</span>
+                        <span class="p">}</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="n">break_flag</span><span class="p">)</span>
+                        <span class="p">{</span>
+                            <span class="n">unique_lock_status</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>
+                            <span class="k">break</span><span class="p">;</span>
+                        <span class="p">}</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+                <span class="c1">// 取出一个任务</span>
+                <span class="k">try</span>
+                <span class="p">{</span>
+                    <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;</span> <span class="n">task</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue</span><span class="p">.</span><span class="n">front</span><span class="p">());</span>
+                    <span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span>
+                    <span class="p">{</span>   <span class="c1">// 如果任务队列为空，则通知任务队列空条件变量</span>
+                        <span class="k">this</span><span class="o">-&gt;</span><span class="n">pool</span><span class="o">-&gt;</span><span class="n">task_queue_empty_cv</span><span class="p">.</span><span class="n">notify_all</span><span class="p">();</span>
+                    <span class="p">}</span>
+                    <span class="n">unique_lock_task_queue</span><span class="p">.</span><span class="n">unlock</span><span class="p">();</span>  <span class="c1">// 取出任务后，释放锁</span>
+                    <span class="n">task</span><span class="p">();</span>     <span class="c1">// 执行任务</span>
+                <span class="p">}</span>
+                <span class="k">catch</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span><span class="o">&amp;</span> <span class="n">e</span><span class="p">)</span>
+                <span class="p">{</span>   <span class="c1">// 如果任务执行过程中发生异常，则打印异常信息并继续循环</span>
+                    <span class="n">std</span><span class="o">::</span><span class="n">cerr</span> <span class="o">&lt;&lt;</span> <span class="n">e</span><span class="p">.</span><span class="n">what</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="sc">'\n'</span><span class="p">;</span>
+                    <span class="k">continue</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">)</span> <span class="p">{}</span>
+</code></pre></div></div>
+
+
+    </div>
+
+</article>
+<div class="post-nav">
+<span></span><span></span>
+</div>
+<div class="post-related">
+      <div>Related Articles</div>
+      <ul>
+        <li class="top-post">
+          <a class="post-link" href="/jekyll-theme-yat/c++/2024/04/24/ThreadPoolBlog.html" title="一个现代 C++ 实现的高效线程池">
+            一个现代 C++ 实现的高效线程池<span class="post-badges">
+  <span class="post-badge badge-top">TOP</span>
+  <span class="post-badge badge-new">NEW</span>
+</span>
+</a>
+        </li>
+</ul>
+    </div>
+<div class="post-comments"></div></section>
+</div>
+
+
+  </section>
+  <section class="sidebar" style="margin-left: 15px;">
+    <!-- Get sidebar items --><style type="text/css" media="screen">
+.post-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+</style>
+
+<div class="post-menu">
+  <div class="post-menu-title">TOC</div>
+  <div class="post-menu-content"></div>
+</div>
+
+<script>
+  function generateContent() {
+    var menu = document.querySelector(".post-menu");
+    var menuContent =  menu.querySelector(".post-menu-content");
+    var headings = document.querySelector(".post-content").querySelectorAll("h2, h3, h4, h5, h6");
+
+    // Hide menu when no headings
+    if (headings.length === 0) {
+      return menu.style.display = "none";
+    }
+
+    // Generate post menu
+    var menuHTML = '';
+    for (var i = 0; i < headings.length; i++) {
+      var h = headings[i];
+      menuHTML += (
+        '<li class="h-' + h.tagName.toLowerCase() + '">'
+        + '<a href="#h-' + h.getAttribute('id') + '">' + h.textContent + '</a></li>');
+    }
+
+    menuContent.innerHTML = '<ul>' + menuHTML + '</ul>';
+
+    // The header element
+    var header = document.querySelector('header.site-header');
+
+    function doMenuCollapse(index, over_items) {
+      var items = menuContent.firstChild.children;
+
+      if (over_items == undefined) {
+        over_items = 20;
+      }
+
+      if (items.length < over_items) {
+        return;
+      }
+
+      var activeItem = items[index];
+      var beginItem = activeItem
+      var endItem = activeItem
+      var beginIndex = index;
+      var endIndex = index + 1;
+      while (beginIndex >= 0
+        && !items[beginIndex].classList.contains('h-h2')) {
+        beginIndex -= 1;
+      }
+      while (endIndex < items.length
+        && !items[endIndex].classList.contains('h-h2')) {
+        endIndex += 1;
+      }
+      for (var i = 0; i < beginIndex; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+      for (var i = beginIndex + 1; i < endIndex; i++) {
+        item = items[i]
+        // if (!item.classList.contains('h-h2')) {
+          item.style.display = '';
+        // }
+      }
+      for (var i = endIndex; i < items.length; i++) {
+        item = items[i]
+        if (!item.classList.contains('h-h2')) {
+          item.style.display = 'none';
+        }
+      }
+    }
+
+    // Init menu collapsed
+    doMenuCollapse(-1);
+
+    // Active the menu item
+    window.addEventListener('scroll', function (event) {
+      var lastActive = menuContent.querySelector('.active');
+      var changed = true;
+      var activeIndex = -1;
+      for (var i = headings.length - 1; i >= 0; i--) {
+        var h = headings[i];
+        var headingRect = h.getBoundingClientRect();
+        var headerRect = header.getBoundingClientRect();
+        var headerTop = Math.floor(headerRect.top);
+        var headerHeight = Math.floor(headerRect.height);
+        var headerHeight = headerTop + headerHeight + 20;
+        if (headingRect.top <= headerHeight) {
+          var id = 'h-' + h.getAttribute('id');
+          var a = menuContent.querySelector('a[href="#' + id  + '"]');
+          var curActive = a.parentNode;
+          if (curActive) {
+            curActive.classList.add('active');
+            activeIndex = i;
+          }
+          if (lastActive == curActive) {
+            changed = false;
+          }
+          break;
+        }
+      }
+      if (changed) {
+        if (lastActive) {
+          lastActive.classList.remove('active');
+        }
+        doMenuCollapse(activeIndex);
+      }
+      event.preventDefault();
+    });
+  }
+  generateContent();
+</script>
+</section>
+</div>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/jekyll-theme-yat/"></data>
+
+  <div class="wrapper">
+    <div class="site-footer-inner">
+<div>Copyright <span class="copyleft">©</span> 2024 Razirp</div>
+      <div>Powered by <a title="Jekyll is a simple, blog-aware, static site
+      generator." href="https://jekyllrb.com/">Jekyll</a> &amp; <a title="Yat, yet
+      another theme." href="https://github.com/jeffreytse/jekyll-theme-yat">Yat Theme</a>.</div>
+      <!-- <div class="footer-col rss-subscribe">Subscribe <a href="/jekyll-theme-yat/feed.xml">via RSS</a></div> -->
+    </div>
+  </div>
+</footer>
+</body>
+</html>

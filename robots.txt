@@ -1,0 +1,1 @@
+Sitemap: https//razirp.github.io/jekyll-theme-yat/sitemap.xml
